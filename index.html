@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    body {
+      background-color: #000000;
+      padding: 0px;
+      margin: 0px;
+    }
+
+    #qrcode canvas {
+      margin: auto;
+    }
+
+    #gradient {
+      height: 100vh;
+      padding: 0px;
+      margin: 0px;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .centered {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      /* 가운데 정렬을 위해 추가 */
+    }
+
+    input {
+      width: 300px;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100px;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    #originLink {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+</head>
+
+<body>
+  <div id="gradient">
+    <div class="container">
+      <div class="centered">
+        <input id="link" placeholder="링크를 입력하세요." type="text">
+        <button id="shortenButton" onclick="shortenUrl()">URL 단축</button>
+        <div id="originLink"></div> <!-- #originLink 요소를 올바르게 위치시킴 -->
+        <div id="qrcode" class="mb-4"></div>
+        <button id="downloadButton" style="display: none;">다운로드</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.7.3/dist/axios.min.js"></script>
+  <script>
+    const qrcodeContainer = document.getElementById('qrcode');
+    const downloadButton = document.getElementById('downloadButton');
+
+    async function shortenUrl() {
+      const shortenApi = "https://api-plinqer.com/short-url";
+      const inputValue = document.getElementById("link");
+      const originLink = inputValue.value;
+
+      // 원래 링크를 화면에 출력
+      document.getElementById("originLink").innerText = `원본 링크: ${originLink}`;
+
+      const res = await axios.post(shortenApi, { long_url: originLink });
+      const shortLink = res.data.body.short_url;
+
+      // input 텍스트를 단축된 링크로 변경
+      inputValue.value = shortLink;
+      
+      downloadButton.style.display = "block";
+      qrcodeContainer.innerHTML = ''; // Clear previous QR code
+      QRCode.toCanvas(shortLink, { width: 256 }, function (error, canvas) {
+        if (error) console.error(error);
+        qrcodeContainer.appendChild(canvas);
+      });
+
+      // 버튼 텍스트를 "복사하기"로 변경
+      const button = document.getElementById("shortenButton");
+      button.innerText = "복사하기";
+
+      // 복사 기능 추가 (복사하기 버튼 클릭 시)
+      button.onclick = function () {
+        navigator.clipboard.writeText(shortLink).then(() => {
+          alert("링크가 클립보드에 복사되었습니다.");
+        });
+      };
+    }
+
+    downloadButton.addEventListener('click', () => {
+      const canvas = qrcodeContainer.querySelector('canvas');
+      if (canvas) {
+        const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+        const link = document.createElement('a');
+        link.download = 'qrcode.png';
+        link.href = image;
+        link.click();
+      }
+    });
+  </script>
+  <script>
+
+    var colors = new Array(
+      [62, 35, 255],
+      [60, 255, 60],
+      [255, 35, 98],
+      [45, 175, 230],
+      [255, 0, 255],
+      [255, 128, 0]);
+
+    var step = 0;
+    //color table indices for: 
+    // current color left
+    // next color left
+    // current color right
+    // next color right
+    var colorIndices = [0, 1, 2, 3];
+
+    //transition speed
+    var gradientSpeed = 0.002;
+
+    function updateGradient() {
+
+      if ($ === undefined) return;
+
+      var c0_0 = colors[colorIndices[0]];
+      var c0_1 = colors[colorIndices[1]];
+      var c1_0 = colors[colorIndices[2]];
+      var c1_1 = colors[colorIndices[3]];
+
+      var istep = 1 - step;
+      var r1 = Math.round(istep * c0_0[0] + step * c0_1[0]);
+      var g1 = Math.round(istep * c0_0[1] + step * c0_1[1]);
+      var b1 = Math.round(istep * c0_0[2] + step * c0_1[2]);
+      var color1 = "rgb(" + r1 + "," + g1 + "," + b1 + ")";
+
+      var r2 = Math.round(istep * c1_0[0] + step * c1_1[0]);
+      var g2 = Math.round(istep * c1_0[1] + step * c1_1[1]);
+      var b2 = Math.round(istep * c1_0[2] + step * c1_1[2]);
+      var color2 = "rgb(" + r2 + "," + g2 + "," + b2 + ")";
+
+      $('#gradient').css({
+        background: "-webkit-gradient(linear, left top, right top, from(" + color1 + "), to(" + color2 + "))"
+      }).css({
+        background: "-moz-linear-gradient(left, " + color1 + " 0%, " + color2 + " 100%)"
+      });
+
+      step += gradientSpeed;
+      if (step >= 1) {
+        step %= 1;
+        colorIndices[0] = colorIndices[1];
+        colorIndices[2] = colorIndices[3];
+
+        //pick two new target color indices
+        //do not pick the same as the current one
+        colorIndices[1] = (colorIndices[1] + Math.floor(1 + Math.random() * (colors.length - 1))) % colors.length;
+        colorIndices[3] = (colorIndices[3] + Math.floor(1 + Math.random() * (colors.length - 1))) % colors.length;
+
+      }
+    }
+
+    setInterval(updateGradient, 10);
+  </script>
+</body>
+
+</html>
